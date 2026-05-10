@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="lt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f2937">
+  <title>Treniruotės vedlys</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --accent: #1f2937;
+      --done: #15803d;
+      --done-bg: #dcfce7;
+      --danger: #991b1b;
+      --focus: #2563eb;
+      --shadow: 0 8px 22px rgba(0,0,0,.08);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 14px 16px 12px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      line-height: 1.25;
+    }
+    header p {
+      margin: 4px 0 0;
+      color: #e5e7eb;
+      font-size: .92rem;
+    }
+    main {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    label {
+      display: grid;
+      gap: 4px;
+      font-size: .88rem;
+      color: var(--muted);
+      font-weight: 650;
+    }
+    select, input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+    select:focus, input:focus, button:focus {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .exerciseHeader {
+      display: grid;
+      gap: 8px;
+    }
+    .count {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: .95rem;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.45rem;
+      line-height: 1.18;
+    }
+    .imageBox {
+      min-height: 132px;
+      display: grid;
+      place-items: center;
+      background: #f3f4f6;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .imageBox svg {
+      width: min(320px, 96%);
+      height: 130px;
+    }
+    .sets {
+      display: grid;
+      gap: 10px;
+    }
+    .setCard {
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 10px;
+      align-items: center;
+      background: #fff;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .setCard.done {
+      background: var(--done-bg);
+      border-color: var(--done);
+    }
+    .setTitle {
+      font-size: 1.08rem;
+      font-weight: 800;
+    }
+    .setInfo {
+      color: var(--muted);
+      font-size: .98rem;
+    }
+    .setFields {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    button {
+      min-height: 46px;
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+    }
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    button.doneButton {
+      background: #374151;
+      color: #fff;
+      min-width: 110px;
+    }
+    .setCard.done button.doneButton {
+      background: var(--done);
+    }
+    .nav {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .wide {
+      grid-column: 1 / -1;
+    }
+    .progress {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: .98rem;
+    }
+    .exerciseList {
+      display: grid;
+      gap: 6px;
+    }
+    .exerciseList button {
+      text-align: left;
+      min-height: 40px;
+      padding: 8px 10px;
+      font-weight: 700;
+      border-radius: 12px;
+    }
+    .exerciseList button.current {
+      background: #111827;
+      color: #fff;
+    }
+    .exerciseList button.completed {
+      background: var(--done-bg);
+      color: #064e3b;
+      border: 1px solid #86efac;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 800;
+      padding: 4px 0;
+    }
+    .smallText {
+      color: var(--muted);
+      font-size: .92rem;
+      margin: 6px 0 0;
+    }
+    .footerActions {
+      display: grid;
+      gap: 8px;
+    }
+    .danger {
+      background: #fee2e2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+    .hidden {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    @media (max-width: 520px) {
+      main { padding: 10px; gap: 10px; }
+      .panel { padding: 12px; border-radius: 16px; }
+      .controls { grid-template-columns: 1fr; }
+      h2 { font-size: 1.28rem; }
+      .setCard { grid-template-columns: 1fr; }
+      .setFields { grid-template-columns: 1fr 1fr; }
+      .doneButton { width: 100%; }
+      .imageBox { min-height: 112px; }
+      .imageBox svg { height: 112px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Treniruotės vedlys</h1>
+      <p>Pratimų eiliškumas, planuoti svoriai ir setų žymėjimas telefone.</p>
+    </header>
+
+    <main>
+      <section class="panel controls" aria-label="Pasirinkimai">
+        <label>Kas treniruojasi
+          <select id="person">
+            <option>Kristijonas</option>
+            <option>Vilmantas</option>
+          </select>
+        </label>
+        <label>Treniruotė
+          <select id="workout"></select>
+        </label>
+      </section>
+
+      <section class="panel exerciseHeader" aria-live="polite">
+        <div class="count" id="count"></div>
+        <h2 id="exerciseName"></h2>
+        <div class="imageBox" id="exerciseImage" aria-hidden="true"></div>
+        <p class="smallText" id="hint"></p>
+      </section>
+
+      <section class="panel sets" aria-label="Setai" id="sets"></section>
+
+      <section class="panel">
+        <div class="nav">
+          <button class="secondary" id="prevBtn">Ankstesnis pratimas</button>
+          <button id="nextBtn">Kitas pratimas</button>
+        </div>
+        <p class="progress" id="progress"></p>
+      </section>
+
+      <section class="panel">
+        <details>
+          <summary>Visi šios treniruotės pratimai</summary>
+          <p class="smallText">Paspauskite pratimą, kad pereitumėte tiesiai prie jo.</p>
+          <div class="exerciseList" id="exerciseList"></div>
+        </details>
+      </section>
+
+      <section class="panel footerActions">
+        <button class="secondary" id="installBtn" hidden>Įdiegti į telefoną</button>
+        <button class="danger" id="resetBtn">Išvalyti šios treniruotės pažymėjimus</button>
+        <p class="smallText">Duomenys saugomi šiame įrenginyje. Programa pirmiausia skirta sekti treniruotės eigą, ne ilgalaikei svorių analizei.</p>
+      </section>
+    </main>
+  </div>
+
+<script>
+const WORKOUTS = [
+  {
+    "id": "A",
+    "title": "Treniruotė A",
+    "exercises": [
+      {
+        "name": "Horizontali trauka sėdint",
+        "image": "row",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "4",
+            "6",
+            "7"
+          ],
+          "Vilmantas": [
+            "5",
+            "7",
+            "8"
+          ]
+        }
+      },
+      {
+        "name": "Vertikali trauka sėdint",
+        "image": "pulldown",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "4",
+            "5",
+            "6"
+          ],
+          "Vilmantas": [
+            "5",
+            "7",
+            "8"
+          ]
+        }
+      },
+      {
+        "name": "Spaudimas sėdint",
+        "image": "chestpress",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "3",
+            "5",
+            "6"
+          ],
+          "Vilmantas": [
+            "4",
+            "6",
+            "7"
+          ]
+        }
+      },
+      {
+        "name": "Spaudimas į viršų sėdint",
+        "image": "shoulderpress",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "1",
+            "1",
+            "1"
+          ],
+          "Vilmantas": [
+            "1",
+            "1",
+            "1"
+          ]
+        }
+      },
+      {
+        "name": "Mostai į šalis su hanteliais stovint",
+        "image": "lateralraise",
+        "reps": [
+          "15",
+          "15",
+          "15"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "2",
+            "3",
+            "3p"
+          ],
+          "Vilmantas": [
+            "2",
+            "3",
+            "3"
+          ]
+        }
+      },
+      {
+        "name": "Bicepsas su štanga stovint",
+        "image": "curl",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "10.5",
+            "13",
+            ""
+          ],
+          "Vilmantas": [
+            "10.5",
+            "13",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Kojų spaudimas sėdint",
+        "image": "legpress",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "35",
+            "65",
+            ""
+          ],
+          "Vilmantas": [
+            "35",
+            "65",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Kojų lenkimas sėdint",
+        "image": "legcurl",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "25",
+            "35",
+            ""
+          ],
+          "Vilmantas": [
+            "25",
+            "35",
+            ""
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "B",
+    "title": "Treniruotė B",
+    "exercises": [
+      {
+        "name": "Prisitraukimai su pagalba",
+        "image": "pullup",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "6",
+            "5",
+            "4"
+          ],
+          "Vilmantas": [
+            "8",
+            "6",
+            "4"
+          ]
+        }
+      },
+      {
+        "name": "Mostai į šalis sėdint",
+        "image": "reardelt",
+        "reps": [
+          "15",
+          "15",
+          "15"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "1",
+            "2",
+            "3"
+          ],
+          "Vilmantas": [
+            "2",
+            "3",
+            "3"
+          ]
+        }
+      },
+      {
+        "name": "Štangos spaudimas gulint",
+        "image": "bench",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "25",
+            "30",
+            "35"
+          ],
+          "Vilmantas": [
+            "30",
+            "35",
+            "40"
+          ]
+        }
+      },
+      {
+        "name": "Spaudimas gulint hamerio tipo treniruoklyje",
+        "image": "chestpress",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "5",
+            "7.5",
+            ""
+          ],
+          "Vilmantas": [
+            "5",
+            "10",
+            "12.5"
+          ]
+        }
+      },
+      {
+        "name": "Rankų tiesimai su hanteliu už galvos",
+        "image": "triceps",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "6",
+            "8",
+            ""
+          ],
+          "Vilmantas": [
+            "10",
+            "11",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Kojų spaudimas kampu",
+        "image": "legpress",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "25",
+            "45",
+            "60"
+          ],
+          "Vilmantas": [
+            "25",
+            "45",
+            "60"
+          ]
+        }
+      },
+      {
+        "name": "Kojų tiesimas sėdint",
+        "image": "legextension",
+        "reps": [
+          "12",
+          "12",
+          "12"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "2",
+            "3",
+            "4p"
+          ],
+          "Vilmantas": [
+            "3",
+            "4",
+            "5p"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "C",
+    "title": "Treniruotė C",
+    "exercises": [
+      {
+        "name": "Pusiau vertikali trauka",
+        "image": "row",
+        "reps": [
+          "15",
+          "12",
+          "10"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "5",
+            "7.5",
+            "10"
+          ],
+          "Vilmantas": [
+            "5",
+            "7.5",
+            "10"
+          ]
+        }
+      },
+      {
+        "name": "Virvės trauka su rotacija",
+        "image": "rope",
+        "reps": [
+          "12",
+          "12",
+          "12"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "2",
+            "3p",
+            ""
+          ],
+          "Vilmantas": [
+            "2",
+            "3p",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Štangos spaudimas kampu",
+        "image": "inclinebench",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "20",
+            "30",
+            ""
+          ],
+          "Vilmantas": [
+            "25",
+            "35",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Puloveris su hanteliu gulint",
+        "image": "pullover",
+        "reps": [
+          "12",
+          "12",
+          "12"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "6",
+            "8",
+            ""
+          ],
+          "Vilmantas": [
+            "8",
+            "10",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Tiesimai stovint treniruoklyje",
+        "image": "triceps",
+        "reps": [
+          "15",
+          "15",
+          "15"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "2",
+            "3p",
+            ""
+          ],
+          "Vilmantas": [
+            "2",
+            "3p",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Plaktukas – rankų lenkimai stovint prie sienos",
+        "image": "curl",
+        "reps": [
+          "12",
+          "10",
+          "8"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "6",
+            "8",
+            ""
+          ],
+          "Vilmantas": [
+            "6",
+            "8",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Įtūpstai stovint vietoje",
+        "image": "lunge",
+        "reps": [
+          "12+12",
+          "12+12",
+          "12+12"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "5 kg",
+            "10 kg",
+            ""
+          ],
+          "Vilmantas": [
+            "5 kg",
+            "10 kg",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Pritūpimai įrėmintom kojom",
+        "image": "squat",
+        "reps": [
+          "12",
+          "12",
+          "12"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "",
+            "",
+            ""
+          ],
+          "Vilmantas": [
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Kojų pakėlimai lygiagretyje",
+        "image": "legraise",
+        "reps": [
+          "15",
+          "17",
+          "20"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "",
+            "",
+            ""
+          ],
+          "Vilmantas": [
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      {
+        "name": "Susirietimai ant suoliuko",
+        "image": "crunch",
+        "reps": [
+          "20",
+          "20",
+          "20"
+        ],
+        "weights": {
+          "Kristijonas": [
+            "",
+            "",
+            ""
+          ],
+          "Vilmantas": [
+            "",
+            "",
+            ""
+          ]
+        }
+      }
+    ]
+  }
+];
+
+const appState = {
+  person: "Kristijonas",
+  workoutId: "A",
+  exerciseIndex: 0,
+  installPrompt: null
+};
+
+const el = {
+  person: document.getElementById("person"),
+  workout: document.getElementById("workout"),
+  count: document.getElementById("count"),
+  exerciseName: document.getElementById("exerciseName"),
+  image: document.getElementById("exerciseImage"),
+  hint: document.getElementById("hint"),
+  sets: document.getElementById("sets"),
+  prev: document.getElementById("prevBtn"),
+  next: document.getElementById("nextBtn"),
+  progress: document.getElementById("progress"),
+  exerciseList: document.getElementById("exerciseList"),
+  reset: document.getElementById("resetBtn"),
+  install: document.getElementById("installBtn")
+};
+
+function keyBase() {
+  return `treniruote:${appState.person}:${appState.workoutId}`;
+}
+
+function setKey(exerciseIndex, setIndex) {
+  return `${keyBase()}:ex:${exerciseIndex}:set:${setIndex}`;
+}
+
+function fieldKey(exerciseIndex, setIndex, field) {
+  return `${keyBase()}:ex:${exerciseIndex}:set:${setIndex}:${field}`;
+}
+
+function getWorkout() {
+  return WORKOUTS.find(w => w.id === appState.workoutId) || WORKOUTS[0];
+}
+
+function getExercise() {
+  return getWorkout().exercises[appState.exerciseIndex];
+}
+
+function isDone(exerciseIndex, setIndex) {
+  return localStorage.getItem(setKey(exerciseIndex, setIndex)) === "1";
+}
+
+function setDone(exerciseIndex, setIndex, done) {
+  if (done) localStorage.setItem(setKey(exerciseIndex, setIndex), "1");
+  else localStorage.removeItem(setKey(exerciseIndex, setIndex));
+}
+
+function valueOrDash(value) {
+  return value && String(value).trim() ? value : "—";
+}
+
+function svgFor(type) {
+  const common = `fill="none" stroke="#111827" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"`;
+  const bench = `<line x1="74" y1="92" x2="206" y2="92" ${common}/><line x1="92" y1="92" x2="78" y2="118" ${common}/><line x1="186" y1="92" x2="204" y2="118" ${common}/>`;
+  const personLying = `<circle cx="115" cy="60" r="14" ${common}/><line x1="130" y1="70" x2="177" y2="84" ${common}/><line x1="152" y1="78" x2="133" y2="98" ${common}/>`;
+  const body = `<circle cx="140" cy="34" r="13" ${common}/><line x1="140" y1="48" x2="140" y2="84" ${common}/>`;
+  const chair = `<line x1="104" y1="89" x2="173" y2="89" ${common}/><line x1="110" y1="90" x2="98" y2="118" ${common}/><line x1="164" y1="90" x2="182" y2="118" ${common}/>`;
+  let art = "";
+  switch(type) {
+    case "row":
+      art = `${body}<line x1="140" y1="83" x2="106" y2="102" ${common}/><line x1="140" y1="83" x2="174" y2="102" ${common}/><line x1="121" y1="59" x2="78" y2="78" ${common}/><line x1="159" y1="59" x2="202" y2="78" ${common}/><line x1="70" y1="78" x2="210" y2="78" ${common}/>`; break;
+    case "pulldown":
+      art = `${body}<line x1="140" y1="84" x2="118" y2="114" ${common}/><line x1="140" y1="84" x2="162" y2="114" ${common}/><line x1="92" y1="16" x2="188" y2="16" ${common}/><line x1="118" y1="50" x2="92" y2="16" ${common}/><line x1="162" y1="50" x2="188" y2="16" ${common}/>`; break;
+    case "chestpress":
+      art = `${chair}${body}<line x1="116" y1="58" x2="75" y2="58" ${common}/><line x1="164" y1="58" x2="205" y2="58" ${common}/><line x1="75" y1="42" x2="75" y2="74" ${common}/><line x1="205" y1="42" x2="205" y2="74" ${common}/>`; break;
+    case "shoulderpress":
+      art = `${chair}${body}<line x1="118" y1="52" x2="96" y2="22" ${common}/><line x1="162" y1="52" x2="184" y2="22" ${common}/><line x1="86" y1="22" x2="106" y2="22" ${common}/><line x1="174" y1="22" x2="194" y2="22" ${common}/>`; break;
+    case "lateralraise":
+      art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="125" y1="56" x2="76" y2="44" ${common}/><line x1="155" y1="56" x2="204" y2="44" ${common}/><circle cx="68" cy="42" r="7" ${common}/><circle cx="212" cy="42" r="7" ${common}/>`; break;
+    case "curl":
+      art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="120" y1="60" x2="103" y2="82" ${common}/><line x1="160" y1="60" x2="177" y2="82" ${common}/><circle cx="100" cy="88" r="7" ${common}/><circle cx="180" cy="88" r="7" ${common}/>`; break;
+    case "legpress":
+      art = `<circle cx="92" cy="50" r="13" ${common}/><line x1="104" y1="62" x2="142" y2="86" ${common}/><line x1="142" y1="86" x2="194" y2="62" ${common}/><line x1="188" y1="40" x2="220" y2="88" ${common}/><line x1="70" y1="96" x2="150" y2="96" ${common}/>`; break;
+    case "legcurl":
+    case "legextension":
+      art = `${chair}<circle cx="128" cy="45" r="13" ${common}/><line x1="136" y1="58" x2="158" y2="88" ${common}/><line x1="158" y1="88" x2="208" y2="88" ${common}/><circle cx="218" cy="88" r="9" ${common}/>`; break;
+    case "pullup":
+      art = `<line x1="80" y1="18" x2="200" y2="18" ${common}/><circle cx="140" cy="48" r="13" ${common}/><line x1="140" y1="61" x2="140" y2="95" ${common}/><line x1="116" y1="28" x2="140" y2="62" ${common}/><line x1="164" y1="28" x2="140" y2="62" ${common}/><line x1="140" y1="95" x2="116" y2="118" ${common}/><line x1="140" y1="95" x2="164" y2="118" ${common}/>`; break;
+    case "reardelt":
+      art = `${chair}<circle cx="140" cy="45" r="13" ${common}/><line x1="140" y1="58" x2="140" y2="86" ${common}/><line x1="120" y1="62" x2="82" y2="52" ${common}/><line x1="160" y1="62" x2="198" y2="52" ${common}/><circle cx="74" cy="50" r="7" ${common}/><circle cx="206" cy="50" r="7" ${common}/>`; break;
+    case "bench":
+    case "inclinebench":
+      art = `${bench}${personLying}<line x1="82" y1="36" x2="198" y2="36" ${common}/><line x1="72" y1="24" x2="72" y2="48" ${common}/><line x1="208" y1="24" x2="208" y2="48" ${common}/><line x1="128" y1="54" x2="128" y2="36" ${common}/><line x1="166" y1="80" x2="166" y2="36" ${common}/>`; break;
+    case "triceps":
+      art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="128" y1="54" x2="128" y2="18" ${common}/><line x1="152" y1="54" x2="152" y2="18" ${common}/><line x1="122" y1="18" x2="158" y2="18" ${common}/>`; break;
+    case "rope":
+      art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><path d="M104 20 C120 50, 116 70, 94 92" ${common}/><path d="M176 20 C160 50, 164 70, 186 92" ${common}/><line x1="104" y1="20" x2="176" y2="20" ${common}/>`; break;
+    case "pullover":
+      art = `${bench}${personLying}<path d="M134 58 C120 28, 112 18, 100 14" ${common}/><circle cx="94" cy="13" r="7" ${common}/>`; break;
+    case "lunge":
+      art = `${body}<line x1="140" y1="84" x2="110" y2="116" ${common}/><line x1="140" y1="84" x2="184" y2="108" ${common}/><line x1="110" y1="116" x2="88" y2="116" ${common}/><line x1="184" y1="108" x2="210" y2="108" ${common}/>`; break;
+    case "squat":
+      art = `${body}<line x1="140" y1="84" x2="110" y2="110" ${common}/><line x1="140" y1="84" x2="170" y2="110" ${common}/><line x1="96" y1="112" x2="124" y2="112" ${common}/><line x1="156" y1="112" x2="184" y2="112" ${common}/>`; break;
+    case "legraise":
+      art = `<line x1="72" y1="20" x2="72" y2="120" ${common}/><line x1="72" y1="20" x2="128" y2="20" ${common}/><circle cx="120" cy="52" r="13" ${common}/><line x1="120" y1="65" x2="120" y2="95" ${common}/><line x1="105" y1="72" x2="72" y2="38" ${common}/><line x1="135" y1="72" x2="128" y2="20" ${common}/><line x1="120" y1="95" x2="170" y2="88" ${common}/>`; break;
+    case "crunch":
+      art = `<line x1="70" y1="96" x2="210" y2="96" ${common}/><circle cx="104" cy="58" r="13" ${common}/><path d="M118 68 C140 72, 154 84, 164 96" ${common}/><line x1="164" y1="96" x2="198" y2="72" ${common}/>`; break;
+    default:
+      art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/>`;
+  }
+  return `<svg role="img" aria-label="Pratimo schema" viewBox="0 0 280 136" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="272" height="128" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>${art}</svg>`;
+}
+
+function init() {
+  WORKOUTS.forEach(w => {
+    const option = document.createElement("option");
+    option.value = w.id;
+    option.textContent = w.title;
+    el.workout.appendChild(option);
+  });
+
+  const saved = JSON.parse(localStorage.getItem("treniruote:nustatymai") || "{}");
+  appState.person = saved.person || appState.person;
+  appState.workoutId = saved.workoutId || appState.workoutId;
+  appState.exerciseIndex = Number.isInteger(saved.exerciseIndex) ? saved.exerciseIndex : 0;
+  el.person.value = appState.person;
+  el.workout.value = appState.workoutId;
+  clampIndex();
+
+  el.person.addEventListener("change", () => {
+    appState.person = el.person.value;
+    saveSettings();
+    render();
+  });
+
+  el.workout.addEventListener("change", () => {
+    appState.workoutId = el.workout.value;
+    appState.exerciseIndex = 0;
+    saveSettings();
+    render();
+  });
+
+  el.prev.addEventListener("click", () => {
+    appState.exerciseIndex = Math.max(0, appState.exerciseIndex - 1);
+    saveSettings();
+    render();
+  });
+
+  el.next.addEventListener("click", () => {
+    const max = getWorkout().exercises.length - 1;
+    appState.exerciseIndex = Math.min(max, appState.exerciseIndex + 1);
+    saveSettings();
+    render();
+  });
+
+  el.reset.addEventListener("click", () => {
+    const prefix = keyBase();
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(prefix)) localStorage.removeItem(k);
+    });
+    render();
+  });
+
+  el.install.addEventListener("click", async () => {
+    if (!appState.installPrompt) return;
+    appState.installPrompt.prompt();
+    await appState.installPrompt.userChoice;
+    appState.installPrompt = null;
+    el.install.hidden = true;
+  });
+
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    appState.installPrompt = event;
+    el.install.hidden = false;
+  });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+
+  render();
+}
+
+function saveSettings() {
+  localStorage.setItem("treniruote:nustatymai", JSON.stringify({
+    person: appState.person,
+    workoutId: appState.workoutId,
+    exerciseIndex: appState.exerciseIndex
+  }));
+}
+
+function clampIndex() {
+  const max = getWorkout().exercises.length - 1;
+  if (appState.exerciseIndex < 0) appState.exerciseIndex = 0;
+  if (appState.exerciseIndex > max) appState.exerciseIndex = max;
+}
+
+function render() {
+  clampIndex();
+  const workout = getWorkout();
+  const exercise = getExercise();
+  el.count.textContent = `${workout.title}. Pratimas ${appState.exerciseIndex + 1} iš ${workout.exercises.length}.`;
+  el.exerciseName.textContent = exercise.name;
+  el.image.innerHTML = svgFor(exercise.image);
+  el.hint.textContent = "Pažymėkite setą kaip atliktą. Svorį galima palikti pagal planą arba pataisyti pagal tai, ką darote šiandien.";
+
+  renderSets(exercise);
+  renderNav(workout);
+  renderList(workout);
+}
+
+function renderSets(exercise) {
+  el.sets.innerHTML = "";
+  const weights = exercise.weights[appState.person] || ["","",""];
+  for (let i = 0; i < 3; i++) {
+    const plannedWeight = valueOrDash(weights[i]);
+    const plannedReps = valueOrDash(exercise.reps[i]);
+    const done = isDone(appState.exerciseIndex, i);
+
+    const card = document.createElement("article");
+    card.className = "setCard" + (done ? " done" : "");
+    card.setAttribute("aria-label", `${i + 1} setas. Pakartojimai: ${plannedReps}. Svoris: ${plannedWeight}.`);
+
+    const text = document.createElement("div");
+    text.innerHTML = `
+      <div class="setTitle">${i + 1} setas</div>
+      <div class="setInfo">Pakartojimai: <strong>${plannedReps}</strong>. Svoris: <strong>${plannedWeight}</strong>.</div>
+    `;
+
+    const button = document.createElement("button");
+    button.className = "doneButton";
+    button.type = "button";
+    button.setAttribute("aria-pressed", done ? "true" : "false");
+    button.textContent = done ? "Atlikta" : "Pažymėti";
+    button.addEventListener("click", () => {
+      setDone(appState.exerciseIndex, i, !isDone(appState.exerciseIndex, i));
+      render();
+    });
+
+    const fields = document.createElement("div");
+    fields.className = "setFields";
+    const storedWeight = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "weight"));
+    const storedReps = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "reps"));
+    fields.innerHTML = `
+      <label>Šiandienos svoris
+        <input inputmode="decimal" aria-label="${i + 1} seto šiandienos svoris" value="${escapeHtml(storedWeight ?? (weights[i] || ""))}">
+      </label>
+      <label>Atlikti pakartojimai
+        <input inputmode="numeric" aria-label="${i + 1} seto atlikti pakartojimai" value="${escapeHtml(storedReps ?? (exercise.reps[i] || ""))}">
+      </label>
+    `;
+    const [weightInput, repsInput] = fields.querySelectorAll("input");
+    weightInput.addEventListener("input", e => localStorage.setItem(fieldKey(appState.exerciseIndex, i, "weight"), e.target.value));
+    repsInput.addEventListener("input", e => localStorage.setItem(fieldKey(appState.exerciseIndex, i, "reps"), e.target.value));
+
+    card.appendChild(text);
+    card.appendChild(button);
+    card.appendChild(fields);
+    el.sets.appendChild(card);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+function renderNav(workout) {
+  el.prev.disabled = appState.exerciseIndex === 0;
+  el.next.disabled = appState.exerciseIndex === workout.exercises.length - 1;
+  const totalSets = workout.exercises.length * 3;
+  let doneSets = 0;
+  workout.exercises.forEach((_, exerciseIndex) => {
+    for (let setIndex = 0; setIndex < 3; setIndex++) {
+      if (isDone(exerciseIndex, setIndex)) doneSets++;
+    }
+  });
+  el.progress.textContent = `Pažymėta ${doneSets} iš ${totalSets} setų.`;
+}
+
+function renderList(workout) {
+  el.exerciseList.innerHTML = "";
+  workout.exercises.forEach((exercise, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `${index + 1}. ${exercise.name}`;
+    const completed = [0,1,2].every(setIndex => isDone(index, setIndex));
+    button.className = index === appState.exerciseIndex ? "current" : (completed ? "completed" : "secondary");
+    button.addEventListener("click", () => {
+      appState.exerciseIndex = index;
+      saveSettings();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    el.exerciseList.appendChild(button);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
