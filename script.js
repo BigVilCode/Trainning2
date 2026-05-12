@@ -548,7 +548,10 @@ const appState = {
   person: "Kristijonas",
   workoutId: "A",
   exerciseIndex: 0,
-  installPrompt: null
+  installPrompt: null,
+  activeSession: null,
+  needsSessionDecision: false,
+  sessionChoiceMade: false
 };
 
 const el = {
@@ -565,6 +568,11 @@ const el = {
   exerciseList: document.getElementById("exerciseList"),
   reset: document.getElementById("resetBtn"),
   install: document.getElementById("installBtn"),
+  sessionTitle: document.getElementById("sessionTitle"),
+  sessionText: document.getElementById("sessionText"),
+  continueSession: document.getElementById("continueSessionBtn"),
+  startSession: document.getElementById("startSessionBtn"),
+  finishSession: document.getElementById("finishSessionBtn"),
   openHistoryBtn: document.getElementById("openHistoryBtn"),
   backToWorkoutBtn: document.getElementById("backToWorkoutBtn"),
   exportBtn: document.getElementById("exportBtn"),
@@ -574,16 +582,115 @@ const el = {
   historyChart: document.getElementById("historyChart")
 };
 
-function keyBase() {
-  return `treniruote:${appState.person}:${appState.workoutId}`;
+function sessionKey() {
+  return `treniruote:sesija:${appState.person}:${appState.workoutId}`;
 }
 
-function setKey(exerciseIndex, setIndex) {
-  return `${keyBase()}:ex:${exerciseIndex}:set:${setIndex}`;
+function lastFinishedSessionKey() {
+  return `${sessionKey()}:paskutine-baigta`;
 }
 
-function fieldKey(exerciseIndex, setIndex, field) {
-  return `${keyBase()}:ex:${exerciseIndex}:set:${setIndex}:${field}`;
+function todayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function createSession() {
+  return {
+    id: `${todayKey()}-${Date.now()}`,
+    date: todayKey(),
+    status: "active",
+    person: appState.person,
+    workoutId: appState.workoutId,
+    exerciseIndex: 0,
+    sets: {}
+  };
+}
+
+function normalizeSession(session) {
+  return {
+    id: session.id || `${session.date || todayKey()}-${Date.now()}`,
+    date: session.date || todayKey(),
+    status: session.status || "active",
+    person: session.person || appState.person,
+    workoutId: session.workoutId || appState.workoutId,
+    exerciseIndex: Number.isInteger(session.exerciseIndex) ? session.exerciseIndex : 0,
+    sets: session.sets || {}
+  };
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(sessionKey());
+    return raw ? normalizeSession(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession() {
+  if (!appState.activeSession) return;
+  appState.activeSession.person = appState.person;
+  appState.activeSession.workoutId = appState.workoutId;
+  appState.activeSession.exerciseIndex = appState.exerciseIndex;
+  localStorage.setItem(sessionKey(), JSON.stringify(appState.activeSession));
+}
+
+function ensureSession() {
+  const storedSession = loadSession();
+  if (!storedSession || storedSession.status !== "active") {
+    appState.activeSession = createSession();
+    appState.exerciseIndex = 0;
+    appState.needsSessionDecision = false;
+    appState.sessionChoiceMade = false;
+    saveSession();
+    return;
+  }
+
+  appState.activeSession = storedSession;
+  appState.exerciseIndex = storedSession.exerciseIndex;
+  appState.needsSessionDecision = storedSession.date !== todayKey() && !appState.sessionChoiceMade;
+}
+
+function startNewSession() {
+  appState.activeSession = createSession();
+  appState.exerciseIndex = 0;
+  appState.needsSessionDecision = false;
+  appState.sessionChoiceMade = false;
+  saveSession();
+  saveSettings();
+  render();
+}
+
+function continueSession() {
+  appState.needsSessionDecision = false;
+  appState.sessionChoiceMade = true;
+  render();
+}
+
+function sessionSetFor(session, exerciseIndex, setIndex) {
+  return session?.sets?.[exerciseIndex]?.[setIndex] || {};
+}
+
+function getSessionSet(exerciseIndex, setIndex, exercise) {
+  const saved = sessionSetFor(appState.activeSession, exerciseIndex, setIndex);
+  const weights = exercise.weights[appState.person] || ["", "", ""];
+  return {
+    done: Boolean(saved.done),
+    weight: saved.weight ?? (weights[setIndex] || ""),
+    reps: saved.reps ?? (exercise.reps[setIndex] || "")
+  };
+}
+
+function updateSessionSet(exerciseIndex, setIndex, patch) {
+  if (!appState.activeSession) ensureSession();
+  if (!appState.activeSession.sets[exerciseIndex]) appState.activeSession.sets[exerciseIndex] = {};
+  const current = appState.activeSession.sets[exerciseIndex][setIndex] || {};
+  appState.activeSession.sets[exerciseIndex][setIndex] = { ...current, ...patch };
+  saveSession();
 }
 
 function getWorkout() {
@@ -595,13 +702,11 @@ function getExercise() {
 }
 
 function isDone(exerciseIndex, setIndex) {
-  return localStorage.getItem(setKey(exerciseIndex, setIndex)) === "1";
+  return Boolean(sessionSetFor(appState.activeSession, exerciseIndex, setIndex).done);
 }
 
 function setDone(exerciseIndex, setIndex, done) {
-  if (done) localStorage.setItem(setKey(exerciseIndex, setIndex), "1");
-  else localStorage.removeItem(setKey(exerciseIndex, setIndex));
-  saveHistory();
+  updateSessionSet(exerciseIndex, setIndex, { done });
 }
 
 function valueOrDash(value) {
@@ -656,39 +761,56 @@ function openDB() {
   });
 }
 
-async function saveHistory() {
+async function saveSessionToHistory(session) {
   const db = await openDB();
-  const today = new Date().toISOString().split('T')[0];
-  const exercise = getExercise();
-  const id = `${today}_${appState.person}_${exercise.name}`;
-  
-  const record = {
-    id,
-    date: today,
-    person: appState.person,
-    workout: appState.workoutId,
-    exerciseName: exercise.name,
-    sets: []
-  };
-  
-  for (let i = 0; i < 3; i++) {
-    const storedWeight = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "weight"));
-    const storedReps = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "reps"));
-    const done = isDone(appState.exerciseIndex, i);
-    const weights = exercise.weights[appState.person] || ["","",""];
-    
-    record.sets.push({
-      weight: storedWeight !== null ? storedWeight : weights[i],
-      reps: storedReps !== null ? storedReps : exercise.reps[i],
-      done
-    });
-  }
-  
+  const workout = WORKOUTS.find(w => w.id === session.workoutId) || getWorkout();
+  const finishedAt = new Date().toISOString();
+  const records = workout.exercises.map((exercise, exerciseIndex) => {
+    const weights = exercise.weights[session.person] || ["", "", ""];
+    return {
+      id: `${session.id}:${exerciseIndex}`,
+      sessionId: session.id,
+      date: session.date,
+      finishedAt,
+      person: session.person,
+      workout: session.workoutId,
+      exerciseName: exercise.name,
+      sets: [0, 1, 2].map(setIndex => {
+        const saved = sessionSetFor(session, exerciseIndex, setIndex);
+        return {
+          weight: saved.weight ?? (weights[setIndex] || ""),
+          reps: saved.reps ?? (exercise.reps[setIndex] || ""),
+          done: Boolean(saved.done)
+        };
+      })
+    };
+  });
+
   return new Promise((resolve) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(record);
+    const store = tx.objectStore(STORE_NAME);
+    records.forEach(record => store.put(record));
     tx.oncomplete = resolve;
   });
+}
+
+async function finishWorkout() {
+  if (!appState.activeSession) ensureSession();
+  const session = normalizeSession(appState.activeSession);
+  await saveSessionToHistory(session);
+
+  session.status = "finished";
+  session.finishedAt = new Date().toISOString();
+  localStorage.setItem(lastFinishedSessionKey(), JSON.stringify(session));
+
+  appState.activeSession = createSession();
+  appState.exerciseIndex = 0;
+  appState.needsSessionDecision = false;
+  appState.sessionChoiceMade = false;
+  saveSession();
+  saveSettings();
+  alert("Treniruotė išsaugota istorijoje. Atidaryta nauja švari sesija.");
+  render();
 }
 
 async function exportCSV() {
@@ -827,23 +949,29 @@ function init() {
   appState.exerciseIndex = Number.isInteger(saved.exerciseIndex) ? saved.exerciseIndex : 0;
   el.person.value = appState.person;
   el.workout.value = appState.workoutId;
+  ensureSession();
   clampIndex();
 
   el.person.addEventListener("change", () => {
     appState.person = el.person.value;
+    appState.workoutId = el.workout.value;
+    appState.sessionChoiceMade = false;
+    ensureSession();
     saveSettings();
     render();
   });
 
   el.workout.addEventListener("change", () => {
     appState.workoutId = el.workout.value;
-    appState.exerciseIndex = 0;
+    appState.sessionChoiceMade = false;
+    ensureSession();
     saveSettings();
     render();
   });
 
   el.prev.addEventListener("click", () => {
     appState.exerciseIndex = Math.max(0, appState.exerciseIndex - 1);
+    saveSession();
     saveSettings();
     render();
   });
@@ -851,16 +979,30 @@ function init() {
   el.next.addEventListener("click", () => {
     const max = getWorkout().exercises.length - 1;
     appState.exerciseIndex = Math.min(max, appState.exerciseIndex + 1);
+    saveSession();
     saveSettings();
     render();
   });
 
   el.reset.addEventListener("click", () => {
-    const prefix = keyBase();
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith(prefix)) localStorage.removeItem(k);
-    });
-    render();
+    startNewSession();
+  });
+
+  el.continueSession.addEventListener("click", () => {
+    continueSession();
+  });
+
+  el.startSession.addEventListener("click", () => {
+    startNewSession();
+  });
+
+  el.finishSession.addEventListener("click", async () => {
+    el.finishSession.disabled = true;
+    try {
+      await finishWorkout();
+    } finally {
+      el.finishSession.disabled = false;
+    }
   });
 
   el.install.addEventListener("click", async () => {
@@ -912,7 +1054,9 @@ function clampIndex() {
 }
 
 function render() {
+  if (!appState.activeSession) ensureSession();
   clampIndex();
+  saveSession();
   const workout = getWorkout();
   const exercise = getExercise();
   el.count.textContent = `${workout.title}. Pratimas ${appState.exerciseIndex + 1} iš ${workout.exercises.length}.`;
@@ -924,9 +1068,30 @@ function render() {
   el.historyView.hidden = true;
   el.mainWorkoutView.hidden = false;
 
+  renderSessionPanel();
   renderSets(exercise);
   renderNav(workout);
   renderList(workout);
+}
+
+function renderSessionPanel() {
+  const session = appState.activeSession;
+  if (!session) return;
+
+  if (appState.needsSessionDecision) {
+    el.sessionTitle.textContent = "Yra nebaigta treniruotė";
+    el.sessionText.textContent = `Yra nebaigta treniruotė iš ${session.date}. Tęsti ar pradėti naują?`;
+    el.continueSession.hidden = false;
+    el.finishSession.hidden = true;
+    el.startSession.textContent = "Pradėti naują";
+    return;
+  }
+
+  el.sessionTitle.textContent = "Aktyvi treniruotė";
+  el.sessionText.textContent = `Sesija pradėta ${session.date}. Baigus treniruotę įrašas bus išsaugotas istorijoje, o kitas atidarymas prasidės švariai.`;
+  el.continueSession.hidden = true;
+  el.finishSession.hidden = false;
+  el.startSession.textContent = "Pradėti naują";
 }
 
 function renderSets(exercise) {
@@ -959,24 +1124,21 @@ function renderSets(exercise) {
 
     const fields = document.createElement("div");
     fields.className = "setFields";
-    const storedWeight = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "weight"));
-    const storedReps = localStorage.getItem(fieldKey(appState.exerciseIndex, i, "reps"));
+    const sessionSet = getSessionSet(appState.exerciseIndex, i, exercise);
     fields.innerHTML = `
       <label>Šiandienos svoris
-        <input inputmode="decimal" aria-label="${i + 1} seto šiandienos svoris" value="${escapeHtml(storedWeight ?? (weights[i] || ""))}">
+        <input inputmode="decimal" aria-label="${i + 1} seto šiandienos svoris" value="${escapeHtml(sessionSet.weight)}">
       </label>
       <label>Atlikti pakartojimai
-        <input inputmode="numeric" aria-label="${i + 1} seto atlikti pakartojimai" value="${escapeHtml(storedReps ?? (exercise.reps[i] || ""))}">
+        <input inputmode="numeric" aria-label="${i + 1} seto atlikti pakartojimai" value="${escapeHtml(sessionSet.reps)}">
       </label>
     `;
     const [weightInput, repsInput] = fields.querySelectorAll("input");
     weightInput.addEventListener("input", e => {
-        localStorage.setItem(fieldKey(appState.exerciseIndex, i, "weight"), e.target.value);
-        saveHistory();
+        updateSessionSet(appState.exerciseIndex, i, { weight: e.target.value });
     });
     repsInput.addEventListener("input", e => {
-        localStorage.setItem(fieldKey(appState.exerciseIndex, i, "reps"), e.target.value);
-        saveHistory();
+        updateSessionSet(appState.exerciseIndex, i, { reps: e.target.value });
     });
 
     card.appendChild(text);
@@ -1019,6 +1181,7 @@ function renderList(workout) {
     button.className = index === appState.exerciseIndex ? "current" : (completed ? "completed" : "secondary");
     button.addEventListener("click", () => {
       appState.exerciseIndex = index;
+      saveSession();
       saveSettings();
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });

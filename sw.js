@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "treniruotes-vedlys-v1";
+const CACHE_NAME = "treniruotes-vedlys-v2";
 const FILES = [
   "./",
   "./index.html",

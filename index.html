@@ -28,6 +28,18 @@
         </label>
       </section>
 
+      <section class="panel sessionPanel" id="sessionPanel" aria-live="polite">
+        <div>
+          <div class="sessionTitle" id="sessionTitle"></div>
+          <p class="smallText" id="sessionText"></p>
+        </div>
+        <div class="sessionActions">
+          <button class="secondary" id="continueSessionBtn" hidden>Tęsti</button>
+          <button class="secondary" id="startSessionBtn">Pradėti naują</button>
+          <button id="finishSessionBtn">Baigti treniruotę</button>
+        </div>
+      </section>
+
       <section class="panel exerciseHeader" aria-live="polite">
         <div class="count" id="count"></div>
         <button id="openHistoryBtn" class="unstyledButton">
@@ -60,7 +72,7 @@
       <div id="historyView" hidden>
         <section class="panel">
           <h2 style="margin-bottom: 8px;">Istorija</h2>
-          
+
           <div class="chartBox" style="margin-top: 16px; margin-bottom: 16px;" aria-hidden="true">
             <svg id="historyChart" viewBox="0 0 300 150" width="100%" height="auto"></svg>
           </div>
@@ -86,7 +98,7 @@
       <section class="panel footerActions">
         <button class="secondary" id="installBtn" hidden>Įdiegti į telefoną</button>
         <button class="secondary" id="exportBtn">Eksportuoti istoriją (CSV)</button>
-        <button class="danger" id="resetBtn">Išvalyti šios treniruotės pažymėjimus</button>
+        <button class="danger" id="resetBtn">Pradėti naują treniruotę</button>
         <p class="smallText">Duomenys saugomi šiame įrenginyje. Programa seka treniruotės eigą ir svorių istoriją.</p>
       </section>
     </main>
