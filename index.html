@@ -28,6 +28,11 @@
         </label>
       </section>
 
+      <section class="panel sessionPanel" id="sessionPanel" aria-live="polite">
+        <div class="sessionTitle" id="sessionTitle"></div>
+        <p class="smallText" id="sessionText"></p>
+      </section>
+
       <section class="panel exerciseHeader" aria-live="polite">
         <div class="count" id="count"></div>
         <button id="openHistoryBtn" class="unstyledButton">
@@ -56,14 +61,8 @@
           </details>
         </section>
 
-        <section class="panel sessionPanel" id="sessionPanel" aria-live="polite">
-          <div>
-            <div class="sessionTitle" id="sessionTitle"></div>
-            <p class="smallText" id="sessionText"></p>
-          </div>
-          <div class="sessionActions">
-            <button id="finishSessionBtn" class="wide">Baigti treniruotę</button>
-          </div>
+        <section class="panel footerActions">
+          <button id="finishSessionBtn" style="width:100%">Baigti treniruotę</button>
         </section>
       </div>
 
