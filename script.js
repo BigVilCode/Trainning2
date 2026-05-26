@@ -1,4 +1,4 @@
-﻿const WORKOUTS = [
+const WORKOUTS = [
   {
     "id": "A",
     "title": "Treniruotė A",
@@ -566,12 +566,9 @@ const el = {
   next: document.getElementById("nextBtn"),
   progress: document.getElementById("progress"),
   exerciseList: document.getElementById("exerciseList"),
-  reset: document.getElementById("resetBtn"),
   install: document.getElementById("installBtn"),
   sessionTitle: document.getElementById("sessionTitle"),
   sessionText: document.getElementById("sessionText"),
-  continueSession: document.getElementById("continueSessionBtn"),
-  startSession: document.getElementById("startSessionBtn"),
   finishSession: document.getElementById("finishSessionBtn"),
   openHistoryBtn: document.getElementById("openHistoryBtn"),
   backToWorkoutBtn: document.getElementById("backToWorkoutBtn"),
@@ -579,15 +576,19 @@ const el = {
   mainWorkoutView: document.getElementById("mainWorkoutView"),
   historyView: document.getElementById("historyView"),
   historyTbody: document.getElementById("historyTbody"),
-  historyChart: document.getElementById("historyChart")
+  historyChart: document.getElementById("historyChart"),
+  wizardOverlay: document.getElementById("wizardOverlay"),
+  wizardPersonOptions: document.getElementById("wizardPersonOptions"),
+  wizardWorkoutOptions: document.getElementById("wizardWorkoutOptions"),
+  wizardStartBtn: document.getElementById("wizardStartBtn")
 };
 
-function sessionKey() {
-  return `treniruote:sesija:${appState.person}:${appState.workoutId}`;
+function sessionKey(person = appState.person, workoutId = appState.workoutId) {
+  return `treniruote:sesija:${person}:${workoutId}`;
 }
 
-function lastFinishedSessionKey() {
-  return `${sessionKey()}:paskutine-baigta`;
+function lastFinishedSessionKey(person = appState.person, workoutId = appState.workoutId) {
+  return `${sessionKey(person, workoutId)}:paskutine-baigta`;
 }
 
 function todayKey() {
@@ -639,6 +640,19 @@ function saveSession() {
   localStorage.setItem(sessionKey(), JSON.stringify(appState.activeSession));
 }
 
+function updateLastActivity() {
+  localStorage.setItem("treniruote:paskutinis-aktyvumas", Date.now().toString());
+}
+
+function shouldShowWizard() {
+  const lastActivity = localStorage.getItem("treniruote:paskutinis-aktyvumas");
+  if (!lastActivity) return true;
+  
+  const diffMs = Date.now() - parseInt(lastActivity, 10);
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays >= 1;
+}
+
 function ensureSession() {
   const storedSession = loadSession();
   if (!storedSession || storedSession.status !== "active") {
@@ -652,7 +666,8 @@ function ensureSession() {
 
   appState.activeSession = storedSession;
   appState.exerciseIndex = storedSession.exerciseIndex;
-  appState.needsSessionDecision = storedSession.date !== todayKey() && !appState.sessionChoiceMade;
+  appState.needsSessionDecision = false;
+  appState.sessionChoiceMade = true;
 }
 
 function startNewSession() {
@@ -662,26 +677,96 @@ function startNewSession() {
   appState.sessionChoiceMade = false;
   saveSession();
   saveSettings();
+  updateLastActivity();
   render();
 }
 
-function continueSession() {
-  appState.needsSessionDecision = false;
-  appState.sessionChoiceMade = true;
-  render();
+let wizardPerson = "";
+let wizardWorkout = "";
+
+function showWizard() {
+  wizardPerson = "";
+  wizardWorkout = "";
+  el.wizardStartBtn.disabled = true;
+
+  el.wizardPersonOptions.querySelectorAll(".wizard-opt-btn").forEach(btn => btn.classList.remove("selected"));
+  el.wizardWorkoutOptions.querySelectorAll(".wizard-opt-btn").forEach(btn => btn.classList.remove("selected"));
+
+  el.wizardOverlay.hidden = false;
+}
+
+function initWizard() {
+  el.wizardPersonOptions.querySelectorAll(".wizard-opt-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      el.wizardPersonOptions.querySelectorAll(".wizard-opt-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      wizardPerson = btn.dataset.value;
+      checkWizardSelection();
+    });
+  });
+
+  el.wizardWorkoutOptions.querySelectorAll(".wizard-opt-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      el.wizardWorkoutOptions.querySelectorAll(".wizard-opt-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      wizardWorkout = btn.dataset.value;
+      checkWizardSelection();
+    });
+  });
+
+  el.wizardStartBtn.addEventListener("click", () => {
+    if (wizardPerson && wizardWorkout) {
+      appState.person = wizardPerson;
+      appState.workoutId = wizardWorkout;
+      appState.exerciseIndex = 0;
+
+      el.person.value = appState.person;
+      el.workout.value = appState.workoutId;
+
+      startNewSession();
+      el.wizardOverlay.hidden = true;
+    }
+  });
+}
+
+function checkWizardSelection() {
+  if (wizardPerson && wizardWorkout) {
+    el.wizardStartBtn.disabled = false;
+  } else {
+    el.wizardStartBtn.disabled = true;
+  }
 }
 
 function sessionSetFor(session, exerciseIndex, setIndex) {
   return session?.sets?.[exerciseIndex]?.[setIndex] || {};
 }
 
+function getLastFinishedSession(person = appState.person, workoutId = appState.workoutId) {
+  try {
+    const raw = localStorage.getItem(lastFinishedSessionKey(person, workoutId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getFallbackSet(exerciseIndex, setIndex, exercise, person = appState.person, workoutId = appState.workoutId) {
+  const lastFinished = getLastFinishedSession(person, workoutId);
+  const lastSet = sessionSetFor(lastFinished, exerciseIndex, setIndex);
+  const weights = exercise.weights[person] || ["", "", ""];
+  return {
+    weight: lastSet.weight ?? (weights[setIndex] || ""),
+    reps: lastSet.reps ?? (exercise.reps[setIndex] || "")
+  };
+}
+
 function getSessionSet(exerciseIndex, setIndex, exercise) {
   const saved = sessionSetFor(appState.activeSession, exerciseIndex, setIndex);
-  const weights = exercise.weights[appState.person] || ["", "", ""];
+  const fallback = getFallbackSet(exerciseIndex, setIndex, exercise);
   return {
     done: Boolean(saved.done),
-    weight: saved.weight ?? (weights[setIndex] || ""),
-    reps: saved.reps ?? (exercise.reps[setIndex] || "")
+    weight: saved.weight ?? fallback.weight,
+    reps: saved.reps ?? fallback.reps
   };
 }
 
@@ -691,6 +776,7 @@ function updateSessionSet(exerciseIndex, setIndex, patch) {
   const current = appState.activeSession.sets[exerciseIndex][setIndex] || {};
   appState.activeSession.sets[exerciseIndex][setIndex] = { ...current, ...patch };
   saveSession();
+  updateLastActivity();
 }
 
 function getWorkout() {
@@ -766,7 +852,6 @@ async function saveSessionToHistory(session) {
   const workout = WORKOUTS.find(w => w.id === session.workoutId) || getWorkout();
   const finishedAt = new Date().toISOString();
   const records = workout.exercises.map((exercise, exerciseIndex) => {
-    const weights = exercise.weights[session.person] || ["", "", ""];
     return {
       id: `${session.id}:${exerciseIndex}`,
       sessionId: session.id,
@@ -777,9 +862,10 @@ async function saveSessionToHistory(session) {
       exerciseName: exercise.name,
       sets: [0, 1, 2].map(setIndex => {
         const saved = sessionSetFor(session, exerciseIndex, setIndex);
+        const fallback = getFallbackSet(exerciseIndex, setIndex, exercise, session.person, session.workoutId);
         return {
-          weight: saved.weight ?? (weights[setIndex] || ""),
-          reps: saved.reps ?? (exercise.reps[setIndex] || ""),
+          weight: saved.weight ?? fallback.weight,
+          reps: saved.reps ?? fallback.reps,
           done: Boolean(saved.done)
         };
       })
@@ -809,6 +895,7 @@ async function finishWorkout() {
   appState.sessionChoiceMade = false;
   saveSession();
   saveSettings();
+  updateLastActivity();
   alert("Treniruotė išsaugota istorijoje. Atidaryta nauja švari sesija.");
   render();
 }
@@ -949,7 +1036,13 @@ function init() {
   appState.exerciseIndex = Number.isInteger(saved.exerciseIndex) ? saved.exerciseIndex : 0;
   el.person.value = appState.person;
   el.workout.value = appState.workoutId;
-  ensureSession();
+
+  initWizard();
+  if (shouldShowWizard()) {
+    showWizard();
+  } else {
+    ensureSession();
+  }
   clampIndex();
 
   el.person.addEventListener("change", () => {
@@ -982,18 +1075,6 @@ function init() {
     saveSession();
     saveSettings();
     render();
-  });
-
-  el.reset.addEventListener("click", () => {
-    startNewSession();
-  });
-
-  el.continueSession.addEventListener("click", () => {
-    continueSession();
-  });
-
-  el.startSession.addEventListener("click", () => {
-    startNewSession();
   });
 
   el.finishSession.addEventListener("click", async () => {
@@ -1078,20 +1159,9 @@ function renderSessionPanel() {
   const session = appState.activeSession;
   if (!session) return;
 
-  if (appState.needsSessionDecision) {
-    el.sessionTitle.textContent = "Yra nebaigta treniruotė";
-    el.sessionText.textContent = `Yra nebaigta treniruotė iš ${session.date}. Tęsti ar pradėti naują?`;
-    el.continueSession.hidden = false;
-    el.finishSession.hidden = true;
-    el.startSession.textContent = "Pradėti naują";
-    return;
-  }
-
   el.sessionTitle.textContent = "Aktyvi treniruotė";
   el.sessionText.textContent = `Sesija pradėta ${session.date}. Baigus treniruotę įrašas bus išsaugotas istorijoje, o kitas atidarymas prasidės švariai.`;
-  el.continueSession.hidden = true;
   el.finishSession.hidden = false;
-  el.startSession.textContent = "Pradėti naują";
 }
 
 function renderSets(exercise) {

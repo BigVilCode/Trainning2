@@ -28,18 +28,6 @@
         </label>
       </section>
 
-      <section class="panel sessionPanel" id="sessionPanel" aria-live="polite">
-        <div>
-          <div class="sessionTitle" id="sessionTitle"></div>
-          <p class="smallText" id="sessionText"></p>
-        </div>
-        <div class="sessionActions">
-          <button class="secondary" id="continueSessionBtn" hidden>Tęsti</button>
-          <button class="secondary" id="startSessionBtn">Pradėti naują</button>
-          <button id="finishSessionBtn">Baigti treniruotę</button>
-        </div>
-      </section>
-
       <section class="panel exerciseHeader" aria-live="polite">
         <div class="count" id="count"></div>
         <button id="openHistoryBtn" class="unstyledButton">
@@ -66,6 +54,16 @@
             <p class="smallText">Paspauskite pratimą, kad pereitumėte tiesiai prie jo.</p>
             <div class="exerciseList" id="exerciseList"></div>
           </details>
+        </section>
+
+        <section class="panel sessionPanel" id="sessionPanel" aria-live="polite">
+          <div>
+            <div class="sessionTitle" id="sessionTitle"></div>
+            <p class="smallText" id="sessionText"></p>
+          </div>
+          <div class="sessionActions">
+            <button id="finishSessionBtn" class="wide">Baigti treniruotę</button>
+          </div>
         </section>
       </div>
 
@@ -98,10 +96,51 @@
       <section class="panel footerActions">
         <button class="secondary" id="installBtn" hidden>Įdiegti į telefoną</button>
         <button class="secondary" id="exportBtn">Eksportuoti istoriją (CSV)</button>
-        <button class="danger" id="resetBtn">Pradėti naują treniruotę</button>
         <p class="smallText">Duomenys saugomi šiame įrenginyje. Programa seka treniruotės eigą ir svorių istoriją.</p>
       </section>
     </main>
+  </div>
+
+  <!-- Treniruotės pradžios vedlys (Wizard overlay) -->
+  <div id="wizardOverlay" class="wizard-overlay" hidden>
+    <div class="wizard-card">
+      <h2>Pradėti naują treniruotę</h2>
+      <p class="smallText" style="margin-bottom: 20px;">Pasirinkite treniruotės nustatymus, kad pradėtumėte.</p>
+      
+      <div class="wizard-step">
+        <label class="wizard-step-label">1. Kas treniruosis?</label>
+        <div class="wizard-options-grid" id="wizardPersonOptions">
+          <button type="button" class="wizard-opt-btn" data-value="Kristijonas">
+            <span class="avatar">K</span>
+            <span>Kristijonas</span>
+          </button>
+          <button type="button" class="wizard-opt-btn" data-value="Vilmantas">
+            <span class="avatar">V</span>
+            <span>Vilmantas</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="wizard-step" style="margin-top: 20px;">
+        <label class="wizard-step-label">2. Pasirinkite treniruotės dieną</label>
+        <div class="wizard-options-grid" id="wizardWorkoutOptions">
+          <button type="button" class="wizard-opt-btn" data-value="A">
+            <span class="day-letter">A</span>
+            <span>Treniruotė A</span>
+          </button>
+          <button type="button" class="wizard-opt-btn" data-value="B">
+            <span class="day-letter">B</span>
+            <span>Treniruotė B</span>
+          </button>
+          <button type="button" class="wizard-opt-btn" data-value="C">
+            <span class="day-letter">C</span>
+            <span>Treniruotė C</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="wizardStartBtn" class="wizard-start-btn" style="margin-top: 28px;" disabled>Pradėti treniruotę</button>
+    </div>
   </div>
 
 <script src="script.js" defer></script>
