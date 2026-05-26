@@ -738,7 +738,11 @@ function checkWizardSelection() {
 }
 
 function sessionSetFor(session, exerciseIndex, setIndex) {
-  return session?.sets?.[exerciseIndex]?.[setIndex] || {};
+  const sets = session?.sets;
+  if (!sets || !Object.prototype.hasOwnProperty.call(sets, exerciseIndex)) return {};
+  const exSets = Reflect.get(sets, exerciseIndex);
+  if (!exSets || !Object.prototype.hasOwnProperty.call(exSets, setIndex)) return {};
+  return Reflect.get(exSets, setIndex) || {};
 }
 
 function getLastFinishedSession(person = appState.person, workoutId = appState.workoutId) {
@@ -753,10 +757,10 @@ function getLastFinishedSession(person = appState.person, workoutId = appState.w
 function getFallbackSet(exerciseIndex, setIndex, exercise, person = appState.person, workoutId = appState.workoutId) {
   const lastFinished = getLastFinishedSession(person, workoutId);
   const lastSet = sessionSetFor(lastFinished, exerciseIndex, setIndex);
-  const weights = exercise.weights[person] || ["", "", ""];
+  const weights = (Object.prototype.hasOwnProperty.call(exercise.weights, person) ? Reflect.get(exercise.weights, person) : null) || ["", "", ""];
   return {
-    weight: lastSet.weight ?? (weights[setIndex] || ""),
-    reps: lastSet.reps ?? (exercise.reps[setIndex] || "")
+    weight: lastSet.weight ?? (Reflect.get(weights, setIndex) || ""),
+    reps: lastSet.reps ?? (Reflect.get(exercise.reps, setIndex) || "")
   };
 }
 
@@ -772,9 +776,12 @@ function getSessionSet(exerciseIndex, setIndex, exercise) {
 
 function updateSessionSet(exerciseIndex, setIndex, patch) {
   if (!appState.activeSession) ensureSession();
-  if (!appState.activeSession.sets[exerciseIndex]) appState.activeSession.sets[exerciseIndex] = {};
-  const current = appState.activeSession.sets[exerciseIndex][setIndex] || {};
-  appState.activeSession.sets[exerciseIndex][setIndex] = { ...current, ...patch };
+  if (!Object.prototype.hasOwnProperty.call(appState.activeSession.sets, exerciseIndex)) {
+    Reflect.set(appState.activeSession.sets, exerciseIndex, {});
+  }
+  const exSets = Reflect.get(appState.activeSession.sets, exerciseIndex);
+  const current = Object.prototype.hasOwnProperty.call(exSets, setIndex) ? Reflect.get(exSets, setIndex) : {};
+  Reflect.set(exSets, setIndex, { ...current, ...patch });
   saveSession();
   updateLastActivity();
 }
@@ -784,7 +791,9 @@ function getWorkout() {
 }
 
 function getExercise() {
-  return getWorkout().exercises[appState.exerciseIndex];
+  const exercises = getWorkout().exercises;
+  const idx = appState.exerciseIndex;
+  return (idx >= 0 && idx < exercises.length) ? exercises[idx] : exercises[0];
 }
 
 function isDone(exerciseIndex, setIndex) {
@@ -800,34 +809,34 @@ function valueOrDash(value) {
 }
 
 function svgFor(type) {
-  const common = `fill="none" stroke="#111827" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"`;
-  const bench = `<line x1="74" y1="92" x2="206" y2="92" ${common}/><line x1="92" y1="92" x2="78" y2="118" ${common}/><line x1="186" y1="92" x2="204" y2="118" ${common}/>`;
-  const personLying = `<circle cx="115" cy="60" r="14" ${common}/><line x1="130" y1="70" x2="177" y2="84" ${common}/><line x1="152" y1="78" x2="133" y2="98" ${common}/>`;
-  const body = `<circle cx="140" cy="34" r="13" ${common}/><line x1="140" y1="48" x2="140" y2="84" ${common}/>`;
-  const chair = `<line x1="104" y1="89" x2="173" y2="89" ${common}/><line x1="110" y1="90" x2="98" y2="118" ${common}/><line x1="164" y1="90" x2="182" y2="118" ${common}/>`;
+  const common = 'fill="none" stroke="#111827" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"';
+  const bench = '<line x1="74" y1="92" x2="206" y2="92" ' + common + '/><line x1="92" y1="92" x2="78" y2="118" ' + common + '/><line x1="186" y1="92" x2="204" y2="118" ' + common + '/>';
+  const personLying = '<circle cx="115" cy="60" r="14" ' + common + '/><line x1="130" y1="70" x2="177" y2="84" ' + common + '/><line x1="152" y1="78" x2="133" y2="98" ' + common + '/>';
+  const body = '<circle cx="140" cy="34" r="13" ' + common + '/><line x1="140" y1="48" x2="140" y2="84" ' + common + '/>';
+  const chair = '<line x1="104" y1="89" x2="173" y2="89" ' + common + '/><line x1="110" y1="90" x2="98" y2="118" ' + common + '/><line x1="164" y1="90" x2="182" y2="118" ' + common + '/>';
   let art = "";
   switch(type) {
-    case "row": art = `${body}<line x1="140" y1="83" x2="106" y2="102" ${common}/><line x1="140" y1="83" x2="174" y2="102" ${common}/><line x1="121" y1="59" x2="78" y2="78" ${common}/><line x1="159" y1="59" x2="202" y2="78" ${common}/><line x1="70" y1="78" x2="210" y2="78" ${common}/>`; break;
-    case "pulldown": art = `${body}<line x1="140" y1="84" x2="118" y2="114" ${common}/><line x1="140" y1="84" x2="162" y2="114" ${common}/><line x1="92" y1="16" x2="188" y2="16" ${common}/><line x1="118" y1="50" x2="92" y2="16" ${common}/><line x1="162" y1="50" x2="188" y2="16" ${common}/>`; break;
-    case "chestpress": art = `${chair}${body}<line x1="116" y1="58" x2="75" y2="58" ${common}/><line x1="164" y1="58" x2="205" y2="58" ${common}/><line x1="75" y1="42" x2="75" y2="74" ${common}/><line x1="205" y1="42" x2="205" y2="74" ${common}/>`; break;
-    case "shoulderpress": art = `${chair}${body}<line x1="118" y1="52" x2="96" y2="22" ${common}/><line x1="162" y1="52" x2="184" y2="22" ${common}/><line x1="86" y1="22" x2="106" y2="22" ${common}/><line x1="174" y1="22" x2="194" y2="22" ${common}/>`; break;
-    case "lateralraise": art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="125" y1="56" x2="76" y2="44" ${common}/><line x1="155" y1="56" x2="204" y2="44" ${common}/><circle cx="68" cy="42" r="7" ${common}/><circle cx="212" cy="42" r="7" ${common}/>`; break;
-    case "curl": art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="120" y1="60" x2="103" y2="82" ${common}/><line x1="160" y1="60" x2="177" y2="82" ${common}/><circle cx="100" cy="88" r="7" ${common}/><circle cx="180" cy="88" r="7" ${common}/>`; break;
-    case "legpress": art = `<circle cx="92" cy="50" r="13" ${common}/><line x1="104" y1="62" x2="142" y2="86" ${common}/><line x1="142" y1="86" x2="194" y2="62" ${common}/><line x1="188" y1="40" x2="220" y2="88" ${common}/><line x1="70" y1="96" x2="150" y2="96" ${common}/>`; break;
-    case "legcurl": case "legextension": art = `${chair}<circle cx="128" cy="45" r="13" ${common}/><line x1="136" y1="58" x2="158" y2="88" ${common}/><line x1="158" y1="88" x2="208" y2="88" ${common}/><circle cx="218" cy="88" r="9" ${common}/>`; break;
-    case "pullup": art = `<line x1="80" y1="18" x2="200" y2="18" ${common}/><circle cx="140" cy="48" r="13" ${common}/><line x1="140" y1="61" x2="140" y2="95" ${common}/><line x1="116" y1="28" x2="140" y2="62" ${common}/><line x1="164" y1="28" x2="140" y2="62" ${common}/><line x1="140" y1="95" x2="116" y2="118" ${common}/><line x1="140" y1="95" x2="164" y2="118" ${common}/>`; break;
-    case "reardelt": art = `${chair}<circle cx="140" cy="45" r="13" ${common}/><line x1="140" y1="58" x2="140" y2="86" ${common}/><line x1="120" y1="62" x2="82" y2="52" ${common}/><line x1="160" y1="62" x2="198" y2="52" ${common}/><circle cx="74" cy="50" r="7" ${common}/><circle cx="206" cy="50" r="7" ${common}/>`; break;
-    case "bench": case "inclinebench": art = `${bench}${personLying}<line x1="82" y1="36" x2="198" y2="36" ${common}/><line x1="72" y1="24" x2="72" y2="48" ${common}/><line x1="208" y1="24" x2="208" y2="48" ${common}/><line x1="128" y1="54" x2="128" y2="36" ${common}/><line x1="166" y1="80" x2="166" y2="36" ${common}/>`; break;
-    case "triceps": art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><line x1="128" y1="54" x2="128" y2="18" ${common}/><line x1="152" y1="54" x2="152" y2="18" ${common}/><line x1="122" y1="18" x2="158" y2="18" ${common}/>`; break;
-    case "rope": art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/><path d="M104 20 C120 50, 116 70, 94 92" ${common}/><path d="M176 20 C160 50, 164 70, 186 92" ${common}/><line x1="104" y1="20" x2="176" y2="20" ${common}/>`; break;
-    case "pullover": art = `${bench}${personLying}<path d="M134 58 C120 28, 112 18, 100 14" ${common}/><circle cx="94" cy="13" r="7" ${common}/>`; break;
-    case "lunge": art = `${body}<line x1="140" y1="84" x2="110" y2="116" ${common}/><line x1="140" y1="84" x2="184" y2="108" ${common}/><line x1="110" y1="116" x2="88" y2="116" ${common}/><line x1="184" y1="108" x2="210" y2="108" ${common}/>`; break;
-    case "squat": art = `${body}<line x1="140" y1="84" x2="110" y2="110" ${common}/><line x1="140" y1="84" x2="170" y2="110" ${common}/><line x1="96" y1="112" x2="124" y2="112" ${common}/><line x1="156" y1="112" x2="184" y2="112" ${common}/>`; break;
-    case "legraise": art = `<line x1="72" y1="20" x2="72" y2="120" ${common}/><line x1="72" y1="20" x2="128" y2="20" ${common}/><circle cx="120" cy="52" r="13" ${common}/><line x1="120" y1="65" x2="120" y2="95" ${common}/><line x1="105" y1="72" x2="72" y2="38" ${common}/><line x1="135" y1="72" x2="128" y2="20" ${common}/><line x1="120" y1="95" x2="170" y2="88" ${common}/>`; break;
-    case "crunch": art = `<line x1="70" y1="96" x2="210" y2="96" ${common}/><circle cx="104" cy="58" r="13" ${common}/><path d="M118 68 C140 72, 154 84, 164 96" ${common}/><line x1="164" y1="96" x2="198" y2="72" ${common}/>`; break;
-    default: art = `${body}<line x1="140" y1="84" x2="116" y2="116" ${common}/><line x1="140" y1="84" x2="164" y2="116" ${common}/>`;
+    case "row": art = body + '<line x1="140" y1="83" x2="106" y2="102" ' + common + '/><line x1="140" y1="83" x2="174" y2="102" ' + common + '/><line x1="121" y1="59" x2="78" y2="78" ' + common + '/><line x1="159" y1="59" x2="202" y2="78" ' + common + '/><line x1="70" y1="78" x2="210" y2="78" ' + common + '/>'; break;
+    case "pulldown": art = body + '<line x1="140" y1="84" x2="118" y2="114" ' + common + '/><line x1="140" y1="84" x2="162" y2="114" ' + common + '/><line x1="92" y1="16" x2="188" y2="16" ' + common + '/><line x1="118" y1="50" x2="92" y2="16" ' + common + '/><line x1="162" y1="50" x2="188" y2="16" ' + common + '/>'; break;
+    case "chestpress": art = chair + body + '<line x1="116" y1="58" x2="75" y2="58" ' + common + '/><line x1="164" y1="58" x2="205" y2="58" ' + common + '/><line x1="75" y1="42" x2="75" y2="74" ' + common + '/><line x1="205" y1="42" x2="205" y2="74" ' + common + '/>'; break;
+    case "shoulderpress": art = chair + body + '<line x1="118" y1="52" x2="96" y2="22" ' + common + '/><line x1="162" y1="52" x2="184" y2="22" ' + common + '/><line x1="86" y1="22" x2="106" y2="22" ' + common + '/><line x1="174" y1="22" x2="194" y2="22" ' + common + '/>'; break;
+    case "lateralraise": art = body + '<line x1="140" y1="84" x2="116" y2="116" ' + common + '/><line x1="140" y1="84" x2="164" y2="116" ' + common + '/><line x1="125" y1="56" x2="76" y2="44" ' + common + '/><line x1="155" y1="56" x2="204" y2="44" ' + common + '/><circle cx="68" cy="42" r="7" ' + common + '/><circle cx="212" cy="42" r="7" ' + common + '/>'; break;
+    case "curl": art = body + '<line x1="140" y1="84" x2="116" y2="116" ' + common + '/><line x1="140" y1="84" x2="164" y2="116" ' + common + '/><line x1="120" y1="60" x2="103" y2="82" ' + common + '/><line x1="160" y1="60" x2="177" y2="82" ' + common + '/><circle cx="100" cy="88" r="7" ' + common + '/><circle cx="180" cy="88" r="7" ' + common + '/>'; break;
+    case "legpress": art = '<circle cx="92" cy="50" r="13" ' + common + '/><line x1="104" y1="62" x2="142" y2="86" ' + common + '/><line x1="142" y1="86" x2="194" y2="62" ' + common + '/><line x1="188" y1="40" x2="220" y2="88" ' + common + '/><line x1="70" y1="96" x2="150" y2="96" ' + common + '/>'; break;
+    case "legcurl": case "legextension": art = chair + '<circle cx="128" cy="45" r="13" ' + common + '/><line x1="136" y1="58" x2="158" y2="88" ' + common + '/><line x1="158" y1="88" x2="208" y2="88" ' + common + '/><circle cx="218" cy="88" r="9" ' + common + '/>'; break;
+    case "pullup": art = '<line x1="80" y1="18" x2="200" y2="18" ' + common + '/><circle cx="140" cy="48" r="13" ' + common + '/><line x1="140" y1="61" x2="140" y2="95" ' + common + '/><line x1="116" y1="28" x2="140" y2="62" ' + common + '/><line x1="164" y1="28" x2="140" y2="62" ' + common + '/><line x1="140" y1="95" x2="116" y2="118" ' + common + '/><line x1="140" y1="95" x2="164" y2="118" ' + common + '/>'; break;
+    case "reardelt": art = chair + '<circle cx="140" cy="45" r="13" ' + common + '/><line x1="140" y1="58" x2="140" y2="86" ' + common + '/><line x1="120" y1="62" x2="82" y2="52" ' + common + '/><line x1="160" y1="62" x2="198" y2="52" ' + common + '/><circle cx="74" cy="50" r="7" ' + common + '/><circle cx="206" cy="50" r="7" ' + common + '/>'; break;
+    case "bench": case "inclinebench": art = bench + personLying + '<line x1="82" y1="36" x2="198" y2="36" ' + common + '/><line x1="72" y1="24" x2="72" y2="48" ' + common + '/><line x1="208" y1="24" x2="208" y2="48" ' + common + '/><line x1="128" y1="54" x2="128" y2="36" ' + common + '/><line x1="166" y1="80" x2="166" y2="36" ' + common + '/>'; break;
+    case "triceps": art = body + '<line x1="140" y1="84" x2="116" y2="116" ' + common + '/><line x1="140" y1="84" x2="164" y2="116" ' + common + '/><line x1="128" y1="54" x2="128" y2="18" ' + common + '/><line x1="152" y1="54" x2="152" y2="18" ' + common + '/><line x1="122" y1="18" x2="158" y2="18" ' + common + '/>'; break;
+    case "rope": art = body + '<line x1="140" y1="84" x2="116" y2="116" ' + common + '/><line x1="140" y1="84" x2="164" y2="116" ' + common + '/><path d="M104 20 C120 50, 116 70, 94 92" ' + common + '/><path d="M176 20 C160 50, 164 70, 186 92" ' + common + '/><line x1="104" y1="20" x2="176" y2="20" ' + common + '/>'; break;
+    case "pullover": art = bench + personLying + '<path d="M134 58 C120 28, 112 18, 100 14" ' + common + '/><circle cx="94" cy="13" r="7" ' + common + '/>'; break;
+    case "lunge": art = body + '<line x1="140" y1="84" x2="110" y2="116" ' + common + '/><line x1="140" y1="84" x2="184" y2="108" ' + common + '/><line x1="110" y1="116" x2="88" y2="116" ' + common + '/><line x1="184" y1="108" x2="210" y2="108" ' + common + '/>'; break;
+    case "squat": art = body + '<line x1="140" y1="84" x2="110" y2="110" ' + common + '/><line x1="140" y1="84" x2="170" y2="110" ' + common + '/><line x1="96" y1="112" x2="124" y2="112" ' + common + '/><line x1="156" y1="112" x2="184" y2="112" ' + common + '/>'; break;
+    case "legraise": art = '<line x1="72" y1="20" x2="72" y2="120" ' + common + '/><line x1="72" y1="20" x2="128" y2="20" ' + common + '/><circle cx="120" cy="52" r="13" ' + common + '/><line x1="120" y1="65" x2="120" y2="95" ' + common + '/><line x1="105" y1="72" x2="72" y2="38" ' + common + '/><line x1="135" y1="72" x2="128" y2="20" ' + common + '/><line x1="120" y1="95" x2="170" y2="88" ' + common + '/>'; break;
+    case "crunch": art = '<line x1="70" y1="96" x2="210" y2="96" ' + common + '/><circle cx="104" cy="58" r="13" ' + common + '/><path d="M118 68 C140 72, 154 84, 164 96" ' + common + '/><line x1="164" y1="96" x2="198" y2="72" ' + common + '/>'; break;
+    default: art = body + '<line x1="140" y1="84" x2="116" y2="116" ' + common + '/><line x1="140" y1="84" x2="164" y2="116" ' + common + '/>';
   }
-  return `<svg role="img" aria-label="Pratimo schema" viewBox="0 0 280 136" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="272" height="128" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>${art}</svg>`;
+  return '<svg role="img" aria-label="Pratimo schema" viewBox="0 0 280 136" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="272" height="128" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>' + art + '</svg>';
 }
 
 const DB_NAME = 'WorkoutDB';
@@ -950,18 +959,43 @@ async function showHistory() {
     el.historyTbody.innerHTML = "";
     
     if (data.length === 0) {
-      el.historyTbody.innerHTML = "<tr><td colspan='4' style='text-align:center'>Nėra išsaugotų duomenų</td></tr>";
-      el.historyChart.innerHTML = '<text x="150" y="75" text-anchor="middle" fill="#6b7280" font-size="12">Nepakanka duomenų grafikui</text>';
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.style.textAlign = "center";
+      td.textContent = "Nėra išsaugotų duomenų";
+      tr.appendChild(td);
+      el.historyTbody.appendChild(tr);
+
+      el.historyChart.innerHTML = "";
+      const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      textNode.setAttribute("x", "150");
+      textNode.setAttribute("y", "75");
+      textNode.setAttribute("text-anchor", "middle");
+      textNode.setAttribute("fill", "#6b7280");
+      textNode.setAttribute("font-size", "12");
+      textNode.textContent = "Nepakanka duomenų grafikui";
+      el.historyChart.appendChild(textNode);
       return;
     }
     
     data.forEach(r => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.date}</td>`;
+      const dateTd = document.createElement("td");
+      dateTd.textContent = r.date;
+      tr.appendChild(dateTd);
       r.sets.forEach(s => {
-        let val = valueOrDash(s.weight) + " kg (" + valueOrDash(s.reps) + "x)";
-        if (!s.done) val = `<span style="opacity:0.5">${val}</span>`;
-        tr.innerHTML += `<td>${val}</td>`;
+        const td = document.createElement("td");
+        const valText = valueOrDash(s.weight) + " kg (" + valueOrDash(s.reps) + "x)";
+        if (!s.done) {
+          const span = document.createElement("span");
+          span.style.opacity = "0.5";
+          span.textContent = valText;
+          td.appendChild(span);
+        } else {
+          td.textContent = valText;
+        }
+        tr.appendChild(td);
       });
       el.historyTbody.appendChild(tr);
     });
@@ -988,7 +1022,14 @@ function drawChart(historyData) {
   });
   
   if (minWt === Infinity) {
-      svg.innerHTML = '<text x="150" y="75" text-anchor="middle" fill="#6b7280" font-size="12">Nėra užbaigtų setų skaičių grafikui</text>';
+      const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      textNode.setAttribute("x", "150");
+      textNode.setAttribute("y", "75");
+      textNode.setAttribute("text-anchor", "middle");
+      textNode.setAttribute("fill", "#6b7280");
+      textNode.setAttribute("font-size", "12");
+      textNode.textContent = "Nėra užbaigtų setų skaičių grafikui";
+      svg.appendChild(textNode);
       return;
   }
   
@@ -1004,21 +1045,30 @@ function drawChart(historyData) {
   
   for(let i=0; i<3; i++) {
     let pathD = "";
-    let pts = "";
     historyData.forEach((r, idx) => {
-      let wt = parseFloat(r.sets[i].weight);
-      if (r.sets[i].done && !isNaN(wt)) {
+      const setData = Reflect.get(r.sets, i);
+      let wt = parseFloat(setData.weight);
+      if (setData.done && !isNaN(wt)) {
         let x = historyData.length === 1 ? w/2 : getX(idx);
         let y = getY(wt);
-        if (pathD === "") pathD = `M ${x} ${y}`;
-        else pathD += ` L ${x} ${y}`;
-        pts += `<circle cx="${x}" cy="${y}" r="3" fill="${colors[i]}" />`;
+        if (pathD === "") pathD = "M " + x + " " + y;
+        else pathD += " L " + x + " " + y;
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", "3");
+        circle.setAttribute("fill", Reflect.get(colors, i));
+        svg.appendChild(circle);
       }
     });
     if (pathD && historyData.length > 1) {
-      svg.innerHTML += `<path d="${pathD}" fill="none" stroke="${colors[i]}" stroke-width="2" />`;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathD);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", Reflect.get(colors, i));
+      path.setAttribute("stroke-width", "2");
+      svg.insertBefore(path, svg.firstChild);
     }
-    svg.innerHTML += pts;
   }
 }
 
@@ -1134,6 +1184,16 @@ function clampIndex() {
   if (appState.exerciseIndex > max) appState.exerciseIndex = max;
 }
 
+function setSvgContent(container, svgString) {
+  container.innerHTML = "";
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgString, "image/svg+xml");
+  const svgEl = doc.querySelector("svg");
+  if (svgEl) {
+    container.appendChild(svgEl);
+  }
+}
+
 function render() {
   if (!appState.activeSession) ensureSession();
   clampIndex();
@@ -1143,7 +1203,7 @@ function render() {
   el.count.textContent = `${workout.title}. Pratimas ${appState.exerciseIndex + 1} iš ${workout.exercises.length}.`;
   el.exerciseName.textContent = exercise.name;
   el.openHistoryBtn.setAttribute('aria-label', `${exercise.name}, atidaryti istoriją`);
-  el.image.innerHTML = svgFor(exercise.image);
+  setSvgContent(el.image, svgFor(exercise.image));
   el.hint.textContent = "Pažymėkite setą kaip atliktą. Svorį galima palikti pagal planą arba pataisyti pagal tai, ką darote šiandien.";
   
   el.historyView.hidden = true;
@@ -1166,10 +1226,10 @@ function renderSessionPanel() {
 
 function renderSets(exercise) {
   el.sets.innerHTML = "";
-  const weights = exercise.weights[appState.person] || ["","",""];
+  const weights = (Object.prototype.hasOwnProperty.call(exercise.weights, appState.person) ? Reflect.get(exercise.weights, appState.person) : null) || ["","",""];
   for (let i = 0; i < 3; i++) {
-    const plannedWeight = valueOrDash(weights[i]);
-    const plannedReps = valueOrDash(exercise.reps[i]);
+    const plannedWeight = valueOrDash(Reflect.get(weights, i));
+    const plannedReps = valueOrDash(Reflect.get(exercise.reps, i));
     const done = isDone(appState.exerciseIndex, i);
 
     const card = document.createElement("article");
@@ -1177,10 +1237,22 @@ function renderSets(exercise) {
     card.setAttribute("aria-label", `${i + 1} setas. Pakartojimai: ${plannedReps}. Svoris: ${plannedWeight}.`);
 
     const text = document.createElement("div");
-    text.innerHTML = `
-      <div class="setTitle">${i + 1} setas</div>
-      <div class="setInfo">Pakartojimai: <strong>${plannedReps}</strong>. Svoris: <strong>${plannedWeight}</strong>.</div>
-    `;
+    const setTitle = document.createElement("div");
+    setTitle.className = "setTitle";
+    setTitle.textContent = (i + 1) + " setas";
+    const setInfo = document.createElement("div");
+    setInfo.className = "setInfo";
+    setInfo.textContent = "Pakartojimai: ";
+    const repsStrong = document.createElement("strong");
+    repsStrong.textContent = plannedReps;
+    setInfo.appendChild(repsStrong);
+    setInfo.appendChild(document.createTextNode(". Svoris: "));
+    const weightStrong = document.createElement("strong");
+    weightStrong.textContent = plannedWeight;
+    setInfo.appendChild(weightStrong);
+    setInfo.appendChild(document.createTextNode("."));
+    text.appendChild(setTitle);
+    text.appendChild(setInfo);
 
     const button = document.createElement("button");
     button.className = "doneButton";
@@ -1195,15 +1267,28 @@ function renderSets(exercise) {
     const fields = document.createElement("div");
     fields.className = "setFields";
     const sessionSet = getSessionSet(appState.exerciseIndex, i, exercise);
-    fields.innerHTML = `
-      <label>Šiandienos svoris
-        <input inputmode="decimal" aria-label="${i + 1} seto šiandienos svoris" value="${escapeHtml(sessionSet.weight)}">
-      </label>
-      <label>Atlikti pakartojimai
-        <input inputmode="numeric" aria-label="${i + 1} seto atlikti pakartojimai" value="${escapeHtml(sessionSet.reps)}">
-      </label>
-    `;
-    const [weightInput, repsInput] = fields.querySelectorAll("input");
+
+    const weightLabel = document.createElement("label");
+    weightLabel.textContent = "Šiandienos svoris ";
+    const weightInput = document.createElement("input");
+    weightInput.type = "text";
+    weightInput.inputMode = "decimal";
+    weightInput.setAttribute("aria-label", `${i + 1} seto šiandienos svoris`);
+    weightInput.value = sessionSet.weight;
+    weightLabel.appendChild(weightInput);
+
+    const repsLabel = document.createElement("label");
+    repsLabel.textContent = "Atlikti pakartojimai ";
+    const repsInput = document.createElement("input");
+    repsInput.type = "text";
+    repsInput.inputMode = "numeric";
+    repsInput.setAttribute("aria-label", `${i + 1} seto atlikti pakartojimai`);
+    repsInput.value = sessionSet.reps;
+    repsLabel.appendChild(repsInput);
+
+    fields.appendChild(weightLabel);
+    fields.appendChild(repsLabel);
+
     weightInput.addEventListener("input", e => {
         updateSessionSet(appState.exerciseIndex, i, { weight: e.target.value });
     });
@@ -1219,13 +1304,16 @@ function renderSets(exercise) {
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[char]));
+  return String(value).replace(/[&<>"']/g, char => {
+    switch (char) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#039;";
+      default: return char;
+    }
+  });
 }
 
 function renderNav(workout) {
