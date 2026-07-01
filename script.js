@@ -860,25 +860,31 @@ async function saveSessionToHistory(session) {
   const db = await openDB();
   const workout = WORKOUTS.find(w => w.id === session.workoutId) || getWorkout();
   const finishedAt = new Date().toISOString();
-  const records = workout.exercises.map((exercise, exerciseIndex) => {
-    return {
-      id: `${session.id}:${exerciseIndex}`,
-      sessionId: session.id,
-      date: session.date,
-      finishedAt,
-      person: session.person,
-      workout: session.workoutId,
-      exerciseName: exercise.name,
-      sets: [0, 1, 2].map(setIndex => {
-        const saved = sessionSetFor(session, exerciseIndex, setIndex);
-        const fallback = getFallbackSet(exerciseIndex, setIndex, exercise, session.person, session.workoutId);
-        return {
-          weight: saved.weight ?? fallback.weight,
-          reps: saved.reps ?? fallback.reps,
-          done: Boolean(saved.done)
-        };
-      })
-    };
+  
+  const records = [];
+  workout.exercises.forEach((exercise, exerciseIndex) => {
+    const sets = [0, 1, 2].map(setIndex => {
+      const saved = sessionSetFor(session, exerciseIndex, setIndex);
+      const fallback = getFallbackSet(exerciseIndex, setIndex, exercise, session.person, session.workoutId);
+      return {
+        weight: saved.weight ?? fallback.weight,
+        reps: saved.reps ?? fallback.reps,
+        done: Boolean(saved.done)
+      };
+    });
+
+    if (sets.some(s => s.done)) {
+      records.push({
+        id: `${session.id}:${exerciseIndex}`,
+        sessionId: session.id,
+        date: session.date,
+        finishedAt,
+        person: session.person,
+        workout: session.workoutId,
+        exerciseName: exercise.name,
+        sets: sets.map(s => s.done ? s : { weight: "", reps: "", done: false })
+      });
+    }
   });
 
   return new Promise((resolve) => {
