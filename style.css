@@ -185,6 +185,20 @@ button.doneButton {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+#prevBtn {
+  background: #833E9D;
+  color: #fff;
+}
+.arrow {
+  font-weight: 900;
+  font-size: 1.3em;
+}
+.arrow.left {
+  margin-right: 10px;
+}
+.arrow.right {
+  margin-left: 10px;
+}
 .wide {
   grid-column: 1 / -1;
 }

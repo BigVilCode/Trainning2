@@ -898,15 +898,16 @@ async function finishWorkout() {
   session.finishedAt = new Date().toISOString();
   localStorage.setItem(lastFinishedSessionKey(), JSON.stringify(session));
 
-  appState.activeSession = createSession();
+  appState.activeSession = null;
   appState.exerciseIndex = 0;
   appState.needsSessionDecision = false;
   appState.sessionChoiceMade = false;
-  saveSession();
+  // We don't saveSession here because we'll create a new one when wizard finishes
   saveSettings();
   updateLastActivity();
-  alert("Treniruotė išsaugota istorijoje. Atidaryta nauja švari sesija.");
+  alert("Treniruotė išsaugota istorijoje.");
   render();
+  showWizard();
 }
 
 async function exportCSV() {
