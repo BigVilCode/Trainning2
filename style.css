@@ -230,7 +230,10 @@ button.doneButton {
 details summary {
   cursor: pointer;
   font-weight: 800;
-  padding: 4px 0;
+  padding: 10px 14px;
+  background-color: #BA95C7;
+  color: #000;
+  border-radius: 14px;
 }
 .smallText {
   color: var(--muted);
