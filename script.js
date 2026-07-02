@@ -573,6 +573,8 @@ const el = {
   openHistoryBtn: document.getElementById("openHistoryBtn"),
   backToWorkoutBtn: document.getElementById("backToWorkoutBtn"),
   exportBtn: document.getElementById("exportBtn"),
+  importTriggerBtn: document.getElementById("importTriggerBtn"),
+  importFileBtn: document.getElementById("importFileBtn"),
   mainWorkoutView: document.getElementById("mainWorkoutView"),
   historyView: document.getElementById("historyView"),
   historyTbody: document.getElementById("historyTbody"),
@@ -949,6 +951,82 @@ async function exportCSV() {
   });
 }
 
+function parseCSVRow(str) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result.map(v => {
+    let val = v.trim();
+    if (val.startsWith('"') && val.endsWith('"')) {
+      val = val.substring(1, val.length - 1);
+    }
+    return val;
+  });
+}
+
+async function importCSV(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const text = e.target.result;
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+    if (lines.length <= 1) {
+      alert("CSV failas tuščias arba netinkamas.");
+      return;
+    }
+    
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    let count = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const cleanRow = parseCSVRow(lines[i]);
+      if (cleanRow.length >= 13) {
+        const [date, person, workout, exerciseName, w1, r1, d1, w2, r2, d2, w3, r3, d3] = cleanRow;
+        const pseudoId = `${date}-${Date.now()}-${i}`;
+        const record = {
+          id: pseudoId,
+          sessionId: `${date}-${Date.now()}`,
+          date: date,
+          finishedAt: new Date().toISOString(),
+          person: person,
+          workout: workout,
+          exerciseName: exerciseName,
+          sets: [
+            { weight: w1, reps: r1, done: d1 === "Taip" },
+            { weight: w2, reps: r2, done: d2 === "Taip" },
+            { weight: w3, reps: r3, done: d3 === "Taip" }
+          ]
+        };
+        store.put(record);
+        count++;
+      }
+    }
+    
+    tx.oncomplete = () => {
+      alert(`Sėkmingai importuota ${count} įrašų.`);
+      if (el.importFileBtn) el.importFileBtn.value = "";
+    };
+    tx.onerror = () => {
+      alert("Klaida importuojant duomenis.");
+      if (el.importFileBtn) el.importFileBtn.value = "";
+    };
+  };
+  reader.readAsText(file);
+}
+
 async function showHistory() {
   const exercise = getExercise();
   el.mainWorkoutView.hidden = true;
@@ -1163,6 +1241,18 @@ function init() {
   el.exportBtn.addEventListener("click", () => {
     exportCSV();
   });
+
+  if (el.importTriggerBtn && el.importFileBtn) {
+    el.importTriggerBtn.addEventListener("click", () => {
+      el.importFileBtn.click();
+    });
+    
+    el.importFileBtn.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        importCSV(e.target.files[0]);
+      }
+    });
+  }
 
   window.addEventListener("beforeinstallprompt", event => {
     event.preventDefault();
